@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -20,17 +19,16 @@ public class ImageLoaderService extends Service {
     private boolean isImageCached = false;
     private boolean isDownloadingNow = false;
 
-    private static Integer DOWNLOADER_RESULT_SUCCESS = 1;
-    private static Integer DOWNLOADER_RESULT_FAILURE = 2;
-    private static String DOWNLOADER_TAG = "ImageDownloaderTag";
-    static String DOWNLOADER_SUCCESS_BROADCAST = "ru.ifmo.rain.korchagin.homework3_broadcastreceiver.ImageDownloadedSuccessfully";
+    private static final Integer DOWNLOADER_RESULT_SUCCESS = 1;
+    private static final Integer DOWNLOADER_RESULT_FAILURE = 2;
 
     void checkImage(String imagePath){
         File imageFile = new File(imagePath);
         isImageCached = imageFile.exists() && BitmapFactory.decodeFile(imagePath) != null;
     }
 
-    class Downloader extends AsyncTask<String, Void, Integer> {
+    class AsyncDownloader extends AsyncTask<String, Void, Integer> {
+
 
         @Override
         protected void onPreExecute(){
@@ -42,14 +40,12 @@ public class ImageLoaderService extends Service {
             InputStream input = null;
             OutputStream output = null;
             HttpURLConnection connection = null;
-            Log.d(DOWNLOADER_TAG, "Trying to download picture");
             try{
-                URL imageURL = new URL(MainActivity.ImageHttpUrl);
+                URL imageURL = new URL(MainActivity.IMAGE_HTTP_URL);
                 connection = (HttpURLConnection) imageURL.openConnection();
                 connection.connect();
 
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    Log.d(DOWNLOADER_TAG, "ResponseCode is not 200");
                     return DOWNLOADER_RESULT_FAILURE;
                 }
 
@@ -78,15 +74,13 @@ public class ImageLoaderService extends Service {
                     connection.disconnect();
                 }
             }
-            Log.d(DOWNLOADER_TAG, "Downloaded successfully");
             return DOWNLOADER_RESULT_SUCCESS;
         }
 
         @Override
         protected void onPostExecute(Integer result){
             if(result.equals(DOWNLOADER_RESULT_SUCCESS)){
-                Intent intent = new Intent(DOWNLOADER_SUCCESS_BROADCAST);
-                sendBroadcast(intent);
+                sendBroadcast(new Intent(MainActivity.DOWNLOADER_SUCCESS_BROADCAST));
             }
             isDownloadingNow = false;
         }
@@ -94,13 +88,12 @@ public class ImageLoaderService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if(isDownloadingNow){
-            return Service.START_NOT_STICKY;
-        }
-        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.ImageName;
+        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.IMAGE_NAME;
         checkImage(imagePath);
-        if(!isImageCached && !isDownloadingNow){
-            new Downloader().execute(imagePath);
+        if(!isImageCached){
+            if(!isDownloadingNow){
+                new AsyncDownloader().execute(imagePath);
+            }
         }
         return Service.START_NOT_STICKY;
     }

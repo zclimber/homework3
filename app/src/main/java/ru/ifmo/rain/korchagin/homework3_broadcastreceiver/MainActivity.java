@@ -15,8 +15,9 @@ import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
 
-    static String ImageName = "tux.jpg";
-    static String ImageHttpUrl = "http://stuffpoint.com/cats/image/23672-cats-cute-cat.jpg";
+    public static final String IMAGE_NAME = "cat.jpg";
+    public static final String IMAGE_HTTP_URL = "http://stuffpoint.com/cats/image/23672-cats-cute-cat.jpg";
+    public static final String DOWNLOADER_SUCCESS_BROADCAST = "ru.ifmo.rain.korchagin.homework3_broadcastreceiver.IMAGE_DOWNLOADED";
 
     private BroadcastReceiver downloadCompleteReceiver = null;
 
@@ -24,20 +25,25 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.ImageName;
+        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.IMAGE_NAME;
         File imageFile = new File(imagePath);
         if(imageFile.exists() && BitmapFactory.decodeFile(imagePath) != null){
             setImageVisible();
         } else {
-            downloadCompleteReceiver = new DownloadCompleteReceiver();
-            IntentFilter filter = new IntentFilter(ImageLoaderService.DOWNLOADER_SUCCESS_BROADCAST);
+            downloadCompleteReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    setImageVisible();
+                }
+            };
+            IntentFilter filter = new IntentFilter(DOWNLOADER_SUCCESS_BROADCAST);
             registerReceiver(downloadCompleteReceiver, filter);
         }
     }
 
     void setImageVisible(){
         ImageView imageView = (ImageView) findViewById(R.id.imageView);
-        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.ImageName;
+        String imagePath = getFilesDir().getAbsolutePath() + MainActivity.IMAGE_NAME;
         imageView.setImageBitmap(BitmapFactory.decodeFile(imagePath));
         imageView.setVisibility(View.VISIBLE);
         TextView errorText = (TextView) findViewById(R.id.textViewNoImage);
@@ -50,13 +56,5 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(downloadCompleteReceiver);
         }
         super.onDestroy();
-    }
-
-    protected class DownloadCompleteReceiver extends BroadcastReceiver{
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            setImageVisible();
-        }
     }
 }
